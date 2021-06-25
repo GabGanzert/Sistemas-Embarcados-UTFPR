@@ -13,3 +13,14 @@ Laboratório 1 da disciplina de Sistemas Embarcados.
   a temporização do atraso será alterada, pois estará se alterando o tempo do ciclo de clock e por consequência o tempo de execução das instruções (neste caso, para o atraso, do
   for()) sem qualquer compensação, de forma que o atraso é inversamente proporcional à frequência de operação.
   
+Os seguintes trechos de código são
+equivalentes:
+– GPIOPinWrite(GPIO_PORTF_BASE,
+GPIO_PIN_4, GPIO_PIN_4);
+– GPIOPinWrite(0x40025000, 0x00000010,
+0x00000010);
+
+• Qual dos trechos de código acima é mais
+legível e fácil de se compreender?
+
+O primeiro, pois utiliza macros que já dizem em seu nome o que representam.
