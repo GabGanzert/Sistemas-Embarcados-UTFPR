@@ -1,0 +1,234 @@
+###############################################################################
+#
+# IAR ELF Linker V9.10.2.313/W64 for ARM                  08/Jul/2021  22:51:52
+# Copyright 2007-2021 IAR Systems AB.
+#
+#    Output file  =
+#        C:\Users\Faça\Desktop\EngEletronica\10\SE\Projetos\WS_IAR_Tiva\TM4C1294_Bare_IAR9-main\Projects\Laboratorio_03\Debug\Exe\Laboratorio_03.out
+#    Map file     =
+#        C:\Users\Faça\Desktop\EngEletronica\10\SE\Projetos\WS_IAR_Tiva\TM4C1294_Bare_IAR9-main\Projects\Laboratorio_03\Debug\List\Laboratorio_03.map
+#    Command line =
+#        -f
+#        C:\Users\Faça\Desktop\EngEletronica\10\SE\Projetos\WS_IAR_Tiva\TM4C1294_Bare_IAR9-main\Projects\Laboratorio_03\Debug\Exe\Laboratorio_03.out.rsp
+#        (C:\Users\Faça\Desktop\EngEletronica\10\SE\Projetos\WS_IAR_Tiva\TM4C1294_Bare_IAR9-main\Projects\Laboratorio_03\Debug\Obj\driverleds.o
+#        C:\Users\Faça\Desktop\EngEletronica\10\SE\Projetos\WS_IAR_Tiva\TM4C1294_Bare_IAR9-main\TivaWare_C_Series-2.1.4.178\driverlib\ewarm\Exe\driverlib.a
+#        C:\Users\Faça\Desktop\EngEletronica\10\SE\Projetos\WS_IAR_Tiva\TM4C1294_Bare_IAR9-main\Projects\Laboratorio_03\Debug\Obj\main.o
+#        C:\Users\Faça\Desktop\EngEletronica\10\SE\Projetos\WS_IAR_Tiva\TM4C1294_Bare_IAR9-main\Projects\Laboratorio_03\Debug\Obj\startup_TM4C1294.o
+#        C:\Users\Faça\Desktop\EngEletronica\10\SE\Projetos\WS_IAR_Tiva\TM4C1294_Bare_IAR9-main\Projects\Laboratorio_03\Debug\Obj\system_TM4C1294_TW.o
+#        --no_out_extension -o
+#        C:\Users\Faça\Desktop\EngEletronica\10\SE\Projetos\WS_IAR_Tiva\TM4C1294_Bare_IAR9-main\Projects\Laboratorio_03\Debug\Exe\Laboratorio_03.out
+#        --map
+#        C:\Users\Faça\Desktop\EngEletronica\10\SE\Projetos\WS_IAR_Tiva\TM4C1294_Bare_IAR9-main\Projects\Laboratorio_03\Debug\List\Laboratorio_03.map
+#        --config "C:\Program Files\IAR Systems\Embedded Workbench
+#        9.0\arm\config\linker\TexasInstruments\TM4C1294NC.icf" --semihosting
+#        --entry __iar_program_start --vfe --text_out locale)
+#
+###############################################################################
+
+*******************************************************************************
+*** RUNTIME MODEL ATTRIBUTES
+***
+
+CppFlavor       = *
+__SystemLibrary = DLib
+__dlib_version  = 6
+
+
+*******************************************************************************
+*** HEAP SELECTION
+***
+
+The basic heap was selected because some modules are built with
+size limitations (and not runtime checking), and --advanced_heap
+was not specified.
+
+
+*******************************************************************************
+*** PLACEMENT SUMMARY
+***
+
+"A0":  place at address 0x0 { ro section .intvec };
+"P1":  place in [from 0x0 to 0xf'ffff] { ro };
+define block CSTACK with size = 32K, alignment = 8 { };
+define block HEAP with size = 64K, alignment = 8 { };
+"P2":  place in [from 0x2000'0000 to 0x2003'ffff] {
+          rw, block CSTACK, block HEAP };
+
+  Section          Kind         Address    Size  Object
+  -------          ----         -------    ----  ------
+"A0":                                     0x3c0
+  .intvec          ro code          0x0   0x3c0  startup_TM4C1294.o [1]
+                                - 0x3c0   0x3c0
+
+"P1":                                     0x9b4
+  .text            ro code        0x3c0   0x2a0  sysctl.o [3]
+  .rodata          const          0x660   0x1b0  sysctl.o [3]
+  .text            ro code        0x810   0x14e  gpio.o [3]
+  .text            ro code        0x95e     0x2  startup_TM4C1294.o [1]
+  .text            ro code        0x960   0x148  driverleds.o [1]
+  .text            ro code        0xaa8    0xf0  main.o [1]
+  .text            ro code        0xb98    0x28  systick.o [3]
+  .rodata          const          0xbc0    0x6c  sysctl.o [3]
+  .text            ro code        0xc2c    0x38  zero_init3.o [4]
+  .rodata          const          0xc64    0x30  sysctl.o [3]
+  .text            ro code        0xc94    0x30  system_TM4C1294_TW.o [1]
+  .text            ro code        0xcc4    0x28  data_init.o [4]
+  .iar.init_table  const          0xcec    0x10  - Linker created -
+  .text            ro code        0xcfc    0x1e  cmain.o [4]
+  .text            ro code        0xd1a     0x4  low_level_init.o [2]
+  .text            ro code        0xd1e     0x4  exit.o [2]
+  .text            ro code        0xd24     0xa  cexit.o [4]
+  .text            ro code        0xd30    0x14  exit.o [5]
+  .text            ro code        0xd44    0x1c  cstartup_M.o [4]
+  .text            ro code        0xd60    0x14  startup_TM4C1294.o [1]
+  .rodata          const          0xd74     0x0  zero_init3.o [4]
+                                - 0xd74   0x9b4
+
+"P2", part 1 of 2:                          0x4
+  .bss             zero     0x2000'0000     0x1  main.o [1]
+  .bss             zero     0x2000'0001     0x1  main.o [1]
+                          - 0x2000'0002     0x2
+
+"P2", part 2 of 2:                       0x8004
+  .noinit          uninit   0x2000'0004     0x4  system_TM4C1294_TW.o [1]
+  CSTACK                    0x2000'0008  0x8000  <Block>
+    CSTACK         uninit   0x2000'0008  0x8000  <Block tail>
+                          - 0x2000'8008  0x8004
+
+Unused ranges:
+
+         From           To      Size
+         ----           --      ----
+        0xd74     0xf'ffff  0xf'f28c
+  0x2000'8008  0x2003'ffff  0x3'7ff8
+
+
+*******************************************************************************
+*** INIT TABLE
+***
+
+          Address      Size
+          -------      ----
+Zero (__iar_zero_init3)
+    1 destination range, total size 0x2:
+          0x2000'0000   0x2
+
+
+
+*******************************************************************************
+*** MODULE SUMMARY
+***
+
+    Module                ro code  ro data  rw data
+    ------                -------  -------  -------
+command line/config:
+    -----------------------------------------------
+    Total:
+
+C:\Users\Faça\Desktop\EngEletronica\10\SE\Projetos\WS_IAR_Tiva\TM4C1294_Bare_IAR9-main\Projects\Laboratorio_03\Debug\Obj: [1]
+    driverleds.o              328
+    main.o                    240                 2
+    startup_TM4C1294.o        982
+    system_TM4C1294_TW.o       48                 4
+    -----------------------------------------------
+    Total:                  1'598                 6
+
+dl7M_tln.a: [2]
+    exit.o                      4
+    low_level_init.o            4
+    -----------------------------------------------
+    Total:                      8
+
+driverlib.a: [3]
+    gpio.o                    334
+    sysctl.o                  672      588
+    systick.o                  40
+    -----------------------------------------------
+    Total:                  1'046      588
+
+rt7M_tl.a: [4]
+    cexit.o                    10
+    cmain.o                    30
+    cstartup_M.o               28
+    data_init.o                40
+    zero_init3.o               56
+    -----------------------------------------------
+    Total:                    164
+
+shb_l.a: [5]
+    exit.o                     20
+    -----------------------------------------------
+    Total:                     20
+
+    Gaps                        4
+    Linker created                      16   32'768
+---------------------------------------------------
+    Grand Total:            2'840      604   32'774
+
+
+*******************************************************************************
+*** ENTRY LIST
+***
+
+Entry                       Address   Size  Type      Object
+-----                       -------   ----  ----      ------
+.iar.init_table$$Base         0xcec          --   Gb  - Linker created -
+.iar.init_table$$Limit        0xcfc          --   Gb  - Linker created -
+?main                         0xcfd         Code  Gb  cmain.o [4]
+CSTACK$$Base            0x2000'0008          --   Gb  - Linker created -
+CSTACK$$Limit           0x2000'8008          --   Gb  - Linker created -
+Evento                  0x2000'0000    0x1  Data  Gb  main.o [1]
+GPIODirModeSet                0x811   0x28  Code  Gb  gpio.o [3]
+GPIOPadConfigSet              0x839  0x102  Code  Gb  gpio.o [3]
+GPIOPinTypeGPIOOutput         0x943    0xa  Code  Gb  gpio.o [3]
+GPIOPinWrite                  0x93b    0x8  Code  Gb  gpio.o [3]
+LEDInit                       0x961   0xba  Code  Gb  driverleds.o [1]
+LEDOff                        0xa59   0x3e  Code  Gb  driverleds.o [1]
+LEDOn                         0xa1b   0x3e  Code  Gb  driverleds.o [1]
+Region$$Table$$Base           0xcec          --   Gb  - Linker created -
+Region$$Table$$Limit          0xcfc          --   Gb  - Linker created -
+SysCtlClockFreqSet            0x423  0x1fc  Code  Gb  sysctl.o [3]
+SysCtlPeripheralEnable        0x405    0x8  Code  Gb  sysctl.o [3]
+SysCtlPeripheralReady         0x3e3    0x8  Code  Gb  sysctl.o [3]
+SysTickEnable                 0xb99    0xc  Code  Gb  systick.o [3]
+SysTickIntEnable              0xba5    0xc  Code  Gb  systick.o [3]
+SysTickPeriodSet              0xbb1    0x8  Code  Gb  systick.o [3]
+SysTick_Handler               0xaa9    0x8  Code  Gb  main.o [1]
+SystemCoreClock         0x2000'0004    0x4  Data  Gb  system_TM4C1294_TW.o [1]
+SystemInit                    0xc95   0x1c  Code  Gb  system_TM4C1294_TW.o [1]
+_SysCtlMemTimingGet           0x3c1   0x22  Code  Lc  sysctl.o [3]
+__Vectors                       0x0          --   Gb  startup_TM4C1294.o [1]
+__Vectors_End                 0x3c0         Data  Gb  startup_TM4C1294.o [1]
+__Vectors_Size {Abs}          0x3c0          --   Gb  startup_TM4C1294.o [1]
+__cmain                       0xcfd         Code  Gb  cmain.o [4]
+__exit                        0xd31   0x14  Code  Gb  exit.o [5]
+__iar_data_init3              0xcc5   0x28  Code  Gb  data_init.o [4]
+__iar_init_vfp                0xd69         Code  Wk  startup_TM4C1294.o [1]
+__iar_program_start           0xd45         Code  Gb  cstartup_M.o [4]
+__iar_zero_init3              0xc2d   0x38  Code  Gb  zero_init3.o [4]
+__low_level_init              0xd1b    0x4  Code  Gb  low_level_init.o [2]
+__vector_table                  0x0         Data  Gb  startup_TM4C1294.o [1]
+__vector_table_0x1c            0x1c         Data  Gb  startup_TM4C1294.o [1]
+_call_main                    0xd09         Code  Gb  cmain.o [4]
+_exit                         0xd25         Code  Gb  cexit.o [4]
+exit                          0xd1f    0x4  Code  Gb  exit.o [2]
+g_pppui32XTALtoVCO            0x660  0x1b0  Data  Lc  sysctl.o [3]
+g_pui32VCOFrequencies         0x658    0x8  Data  Lc  sysctl.o [3]
+g_pui32Xtals                  0xbc0   0x6c  Data  Lc  sysctl.o [3]
+g_sXTALtoMEMTIM               0xc64   0x30  Data  Lc  sysctl.o [3]
+main                          0xab1   0xda  Code  Gb  main.o [1]
+main::Estado            0x2000'0001    0x1  Data  Lc  main.o [1]
+
+
+[1] = C:\Users\Faça\Desktop\EngEletronica\10\SE\Projetos\WS_IAR_Tiva\TM4C1294_Bare_IAR9-main\Projects\Laboratorio_03\Debug\Obj
+[2] = dl7M_tln.a
+[3] = driverlib.a
+[4] = rt7M_tl.a
+[5] = shb_l.a
+
+   2'840 bytes of readonly  code memory
+     604 bytes of readonly  data memory
+  32'774 bytes of readwrite data memory
+
+Errors: none
+Warnings: none
