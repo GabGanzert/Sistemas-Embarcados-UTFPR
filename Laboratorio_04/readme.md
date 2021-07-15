@@ -4,6 +4,7 @@ Laboratório 4 de Sistemas Embarcados
 
 4. 
     thread1: tempo do job + 100 ticks
+    
     thread2: sempre 100 ticks
 
     com tick a cada 1ms:
