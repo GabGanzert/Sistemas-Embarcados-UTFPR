@@ -129,7 +129,9 @@ void receptora(void *arg)
             recept_elev->change_prio = true;   
           }
           
-          osMessageQueuePut(recept_elev->mov_queue_id, tx_msg, prio, osWaitForever);   
+          osMessageQueuePut(recept_elev->mov_queue_id, tx_msg, prio, osWaitForever); 
+
+          button_ligth_on(recept_elev->elev_ch, andar_char);
         }
         else
         {
@@ -377,11 +379,9 @@ void acionadora(void *arg)
   
   osThreadFlagsWait(INIT_ACIONA_FLAG, osFlagsWaitAny, osWaitForever);
   
-  osMutexAcquire(mutex_id, osWaitForever);
-  UARTprintf("%c%c\r", elev->elev_ch, 'r'); //inicializa elevador
-  osMutexRelease(mutex_id);
-  
+  init_elev(elev->elev_ch);
   elev->estado = PARADO_ABRINDO;
+
   sprintf(exp_msg, "%cA\r", elev->elev_ch);
   
   while(1)
@@ -437,11 +437,9 @@ void acionadora(void *arg)
           on_previous_floor = true;
         }
         
-        osMutexAcquire(mutex_id, osWaitForever);
-        UARTprintf("%c%c\r", elev->elev_ch, 'f'); //pediu pra fechar a porta
-        osMutexRelease(mutex_id);
-        
+        close_door(elev->elev_ch);        
         elev->estado = PARADO_FECHANDO;
+
         sprintf(exp_msg, "%cF", elev->elev_ch);     
       }
     }
@@ -459,12 +457,8 @@ void acionadora(void *arg)
             get_position(elev, rx_msg);
         }
         else
-        {          
-          osMutexAcquire(mutex_id, osWaitForever);
-          UARTprintf("%c%c\r", elev->elev_ch, 'p'); //pede p/ parar
-          osMutexRelease(mutex_id);
-          
-          osDelay(DELAY_MS_TO_STOP);
+        {
+          stop_elev(elev->elev_ch);
           
           osMutexAcquire(mutex_acert, osWaitForever);
           elev->estado = ACERTA_POSICAO;
@@ -517,20 +511,14 @@ void acionadora(void *arg)
           
           if(dif < 0)
           {
-            osMutexAcquire(mutex_id, osWaitForever);
-            UARTprintf("%c%c\r", elev->elev_ch, 's'); //pediu subir
-            osMutexRelease(mutex_id);
-            
+            go_up(elev->elev_ch);            
             elev->estado = SUBINDO;
             
             strcpy(exp_msg, exp_msg_floor);
           }
           else if(dif > 0)
           {
-             osMutexAcquire(mutex_id, osWaitForever);
-             UARTprintf("%c%c\r", elev->elev_ch, 'd'); //pediu descer
-             osMutexRelease(mutex_id); 
-             
+             go_down(elev->elev_ch);
              elev->estado = DESCENDO;
              
              strcpy(exp_msg, exp_msg_floor);
@@ -566,11 +554,9 @@ void acionadora(void *arg)
           
           if(elev->andar != 0)
           {
-            osMutexAcquire(mutex_id, osWaitForever);
-            UARTprintf("%c%c\r", elev->elev_ch, 'f'); //pediu pra fechar a porta
-            osMutexRelease(mutex_id);
-            
+            close_door(elev->elev_ch);            
             elev->estado = PARADO_FECHANDO;
+
             sprintf(exp_msg, "%cF", elev->elev_ch);
           }  
         }
@@ -642,27 +628,19 @@ void acionadora(void *arg)
         
         if(elev->current_position < (position_to_reach - SIM_TOLERANCE))
         { 
-          osMutexAcquire(mutex_id, osWaitForever);
-          UARTprintf("%c%c\r", elev->elev_ch, 's'); //pediu subir
+          go_up(elev->elev_ch);
           
           osDelay(DELAY_MS_TO_ADJUST);
 
-          UARTprintf("%c%c\r", elev->elev_ch, 'p'); //pede p/ parar
-          osMutexRelease(mutex_id);
-          
-          osDelay(DELAY_MS_TO_STOP);
+          stop_elev(elev->elev_ch);
         }
         else if(elev->current_position > (position_to_reach + SIM_TOLERANCE))
-        {         
-          osMutexAcquire(mutex_id, osWaitForever);
-          UARTprintf("%c%c\r", elev->elev_ch, 'd'); //pediu descer
+        {
+          go_down(elev->elev_ch);
           
           osDelay(DELAY_MS_TO_ADJUST);
           
-          UARTprintf("%c%c\r", elev->elev_ch, 'p'); //pede p/ parar
-          osMutexRelease(mutex_id);
-          
-          osDelay(DELAY_MS_TO_STOP);
+          stop_elev(elev->elev_ch);
         }
         else
         {       
@@ -670,15 +648,15 @@ void acionadora(void *arg)
              && elev->current_position < (position_to_reach + SIM_TOLERANCE))
           {
             osMutexRelease(mutex_acert);
-            
-            osMutexAcquire(mutex_id, osWaitForever);
-            UARTprintf("%c%c\r", elev->elev_ch, 'a'); //pede p/ abrir
-            osMutexRelease(mutex_id);
-            
-            elev->estado = PARADO_ABRINDO;
-            sprintf(exp_msg, "%cA\r", elev->elev_ch);
-            
+
             come_to_destiny = true;
+            
+            open_door(elev->elev_ch);
+            elev->estado = PARADO_ABRINDO;
+
+            sprintf(exp_msg, "%cA\r", elev->elev_ch);
+
+            button_ligth_off(elev->elev_ch, (andar_request + ASCII_OFFSET + ASCII_OFFSET_FLOOR_CHAR_TO_DIGIT_CHAR));  
           }
         }
       break;
@@ -756,28 +734,101 @@ void main(void){
   while(1);
 } // main
 
+void send_command(const char* command)
+{
+  osMutexAcquire(mutex_id, osWaitForever);
+  UARTprintf("%s\r", command);
+  osMutexRelease(mutex_id);   
+}
+
+void init_elev(char elev_ch)
+{
+  char init_msg[5] = {0};
+  sprintf(init_msg, "%cr", elev_ch);
+
+  send_command(init_msg);
+}
+
+void button_ligth_on(char elev_ch, char floor_ch)
+{
+  char on_msg[5] = {0};
+  sprintf(on_msg, "%cL%c", elev_ch, floor_ch);
+
+  send_command(on_msg);
+}
+
+void button_ligth_off(char elev_ch, char floor_ch)
+{
+  char off_msg[5] = {0};
+  sprintf(off_msg, "%cD%c", elev_ch, floor_ch);
+
+  send_command(off_msg);
+}
+
+void open_door(char elev_ch)
+{
+  char open_msg[5] = {0};
+  sprintf(open_msg, "%ca", elev_ch);
+
+  send_command(open_msg);
+}
+
+void close_door(char elev_ch)
+{
+  char close_msg[5] = {0};
+  sprintf(close_msg, "%cf", elev_ch);
+
+  send_command(close_msg);
+}
+
+void stop_elev(char elev_ch)
+{
+  char stop_msg[5] = {0};
+  sprintf(stop_msg, "%cp", elev_ch);
+
+  send_command(stop_msg); 
+
+  osDelay(DELAY_MS_TO_STOP);
+}
+
+void go_up(char elev_ch)
+{
+  char up_msg[5] = {0};
+  sprintf(up_msg, "%cs", elev_ch);
+
+  send_command(up_msg);
+}
+
+void go_down(char elev_ch)
+{
+  char down_msg[5] = {0};
+  sprintf(down_msg, "%cd", elev_ch);
+
+  send_command(down_msg);
+}
+
 bool get_position(elevador_t* elev, char* rx_msg)
 {
 	osMutexAcquire(mutex_id, osWaitForever);
     
-    bool ret = false;
-    req_elev_pos = elev->elev_ch;
-    UARTprintf("%c%c\r", elev->elev_ch, 'x');
-     
-    osStatus_t q_ret = osMessageQueueGet(elev->elev_queue_id, rx_msg, NULL, 200);  
+  bool ret = false;
+  req_elev_pos = elev->elev_ch;
+  UARTprintf("%c%c\r", elev->elev_ch, 'x');
     
-    if(q_ret == osOK)
-    {  
-      if(rx_msg[0] != 'e' && rx_msg[0] != 'c' && rx_msg[0] != 'd')
-      {
-        elev->current_position = atoi(rx_msg);
-        ret = true;
-      }
-    } 
-    
-    osMutexRelease(mutex_id);
+  osStatus_t q_ret = osMessageQueueGet(elev->elev_queue_id, rx_msg, NULL, 200);  
   
-    return ret;
+  if(q_ret == osOK)
+  {  
+    if(rx_msg[0] != 'e' && rx_msg[0] != 'c' && rx_msg[0] != 'd')
+    {
+      elev->current_position = atoi(rx_msg);
+      ret = true;
+    }
+  }
+  
+  osMutexRelease(mutex_id);
+
+  return ret;
 }
 
 void parse_solicitation(elevador_t* elev, uint8_t andar_request, char* rx_msg, char* exp_msg_floor)

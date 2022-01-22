@@ -115,4 +115,22 @@ void parse_solicitation(elevador_t* elev, uint8_t andar_request, char* rx_msg, c
   * 
   * @return the priority calculated. */
 uint8_t calc_prio(estados estado, int8_t diff_floors);
+
+void send_command(const char* command);
+
+void init_elev(char elev_ch);
+
+void button_ligth_on(char elev_ch, char floor_ch);
+
+void button_ligth_off(char elev_ch, char floor_ch);
+
+void open_door(char elev_ch);
+
+void close_door(char elev_ch);
+
+void stop_elev(char elev_ch);
+
+void go_up(char elev_ch);
+
+void go_down(char elev_ch);
 #endif
