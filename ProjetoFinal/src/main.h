@@ -4,18 +4,18 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#define QTT_LEVELS 16 //quantidade de andares com o terreo
+#define QTT_LEVELS 16 
 #define MAX_POSITION 75000
 
-#define QUEUE_SIZE 10 //msg queue size
+#define QUEUE_SIZE 10 
 #define UART_BUFFER_SIZE 15
 #define BUFFER_SIZE 10
 
 #define SOLICITATION_CHAR 'S'
 
-#define ASCII_OFFSET_INT_NUM_TO_CHAR_NUM 48 //offset entre numero e char
+#define ASCII_OFFSET_INT_NUM_TO_CHAR_NUM 48 
 #define ASCII_OFFSET_CHAR_NUM_TO_FLOOR_CHAR 49
-#define ASCII_FLOOR_CHAR_TO_INT 97 //offset entre char que representa o andar e seu valor inteiro
+#define ASCII_FLOOR_CHAR_TO_INT 97 
 
 #define SIM_TOLERANCE 100
 #define TOLERANCE_BASE 500
@@ -27,14 +27,13 @@
 #define DELAY_MS_TO_WAIT_TO_CLOSE 2000
 #define DELAY_MS_TO_KEEP_OPEN 7000
 
-//flags
+
 enum{
   RX_FLAG = 0x01,
   INIT_GERENCI_FLAG = 0x02, 
   INIT_ACIONA_FLAG = 0x04
 };
 
-//estados do elevador
 typedef enum{
   PARADO_ABERTO,
   PARADO_FECHANDO,
@@ -45,7 +44,6 @@ typedef enum{
   ACERTA_POSICAO
 }estados;
 
-//struct do elevador
 typedef struct{
   osThreadId_t id;
   char elev_ch;
@@ -117,6 +115,8 @@ void parse_solicitation(elevador_t* elev, uint8_t andar_request, char* rx_msg, c
   * @return the priority calculated. 
   * */
 uint8_t calc_prio(estados estado, int8_t diff_floors);
+
+void update_level(elevador_t* elev, char* rx_msg);
 
 void send_command(const char* command);
 

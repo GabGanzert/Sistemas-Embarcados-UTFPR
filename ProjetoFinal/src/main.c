@@ -452,7 +452,12 @@ void acionadora(void *arg)
       }
       else
       {
-        osMessageQueueGet(elev->elev_queue_id, rx_msg,  NULL, 0);
+        osStatus_t ret = osMessageQueueGet(elev->elev_queue_id, rx_msg,  NULL, 0);
+
+        if(ret == osOK)
+        {
+          update_level(elev, rx_msg);
+        }
       }
     }
 
@@ -556,60 +561,19 @@ void acionadora(void *arg)
       break;
       //------------------------------------------------------ 
       case SUBINDO:
-        // if((andar_request - elev->andar)  == 1)
-        // {
-        //   on_previous_floor = true;
-        // }
-
-        // if(andar_request < 11)
-        // {
-        //   if((strncmp(exp_msg, rx_msg, 2) == 0))
-        //   {            
-        //     on_previous_floor = true;
-        //   }        
-        // }
-        // else
-        // {
-        //   if((strncmp(exp_msg, rx_msg, 3) == 0))
-        //   {
-        //     on_previous_floor = true;
-        //   }
-        // }
-
-        if(((andar_request - elev->andar) == 1) || ((andar_request < 11) && (strncmp(exp_msg, rx_msg, 2) == 0))
-          || (strncmp(exp_msg, rx_msg, 3) == 0))
+        if(((andar_request - elev->andar) == 1) || (strncmp(exp_msg, rx_msg, 3) == 0))
         {
           on_previous_floor = true;
         }
       break;
       //------------------------------------------------------ 
       case DESCENDO:
-        // if((elev->andar - andar_request) == 1)
-        // {
-        //   on_previous_floor = true;
-        // }
-
-        // if(andar_request < 9)
-        // {
-        //   if((strncmp(exp_msg, rx_msg, 2) == 0))
-        //   {
-        //     on_previous_floor = true;
-        //   }          
-        // }
-        // else
-        // {
-        //   if((strncmp(exp_msg, rx_msg, 3) == 0))
-        //   {
-        //     on_previous_floor = true;
-        //   }
-        // }
-
-        if(((elev->andar - andar_request) == 1) || ((andar_request < 9) && (strncmp(exp_msg, rx_msg, 2) == 0))
-          || (strncmp(exp_msg, rx_msg, 3) == 0))
+        if(((elev->andar - andar_request) == 1) || (strncmp(exp_msg, rx_msg, 3) == 0))
         {
           on_previous_floor = true;
         }
-      break; 
+      break;
+      //------------------------------------------------------
       case ACERTA_POSICAO:
 
         do
@@ -824,48 +788,60 @@ bool get_position(elevador_t* elev, char* rx_msg)
   return ret;
 }
 
+void update_level(elevador_t* elev, char* rx_msg)
+{
+  if(rx_msg[2] == 0)
+  {
+    elev->andar = rx_msg[1] - ASCII_OFFSET_INT_NUM_TO_CHAR_NUM;
+  }
+  else if(rx_msg[3] == 0)
+  {
+    elev->andar = 10 + (rx_msg[2] - ASCII_OFFSET_INT_NUM_TO_CHAR_NUM);
+  }
+}
+
 void parse_solicitation(elevador_t* elev, uint8_t andar_request, char* rx_msg, char* exp_msg_floor)
 {
 	int8_t dif = elev->andar - andar_request;
         
-  if(andar_request < 10) //andar so tem 1 digito
+  if(andar_request < 10)
   {          
-    if(dif < 0)//deve subir
+    if(dif < 0)
     {
-        sprintf(exp_msg_floor, "%c%c%c", elev->elev_ch, rx_msg[2] - 1, rx_msg[3]);
+        sprintf(exp_msg_floor, "%c%c", elev->elev_ch, rx_msg[2] - 1);
     }
     else if (dif > 0)
     {
         if(andar_request == 9)
         {
-          sprintf(exp_msg_floor, "%c%c%c%c", elev->elev_ch, rx_msg[2] - 8, rx_msg[2] - 9, rx_msg[3]);
+          sprintf(exp_msg_floor, "%c%c%c", elev->elev_ch, rx_msg[2] - 8, rx_msg[2] - 9);
         }
         else
         {  
-          sprintf(exp_msg_floor, "%c%c%c", elev->elev_ch, rx_msg[2] + 1, rx_msg[3]);
+          sprintf(exp_msg_floor, "%c%c", elev->elev_ch, rx_msg[2] + 1);
         }
     }
   }
   else if(andar_request == 10)
   {
-    if(dif < 0)//deve subir
+    if(dif < 0)
     {
-        sprintf(exp_msg_floor, "%c%c%c", elev->elev_ch, rx_msg[3] + 9, rx_msg[4]);
+        sprintf(exp_msg_floor, "%c%c", elev->elev_ch, rx_msg[3] + 9);
     }
     else if (dif > 0)
     {
-        sprintf(exp_msg_floor, "%c%c%c%c", elev->elev_ch, rx_msg[2], rx_msg[3] +1, rx_msg[4]);
+        sprintf(exp_msg_floor, "%c%c%c", elev->elev_ch, rx_msg[2], rx_msg[3] +1);
     }
   }
   else
   {
-    if(dif < 0)//deve subir
+    if(dif < 0)
     {
-        sprintf(exp_msg_floor, "%c%c%c%c", elev->elev_ch, rx_msg[2], rx_msg[3] - 1, rx_msg[4]);
+        sprintf(exp_msg_floor, "%c%c%c", elev->elev_ch, rx_msg[2], rx_msg[3] - 1);
     }
     else if (dif > 0)
     {
-        sprintf(exp_msg_floor, "%c%c%c%c", elev->elev_ch, rx_msg[2], rx_msg[3] + 1, rx_msg[4]);
+        sprintf(exp_msg_floor, "%c%c%c", elev->elev_ch, rx_msg[2], rx_msg[3] + 1);
     } 
   }
 }
