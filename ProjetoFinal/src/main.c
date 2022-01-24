@@ -44,7 +44,6 @@ void UART0_Handler(void){
   }
   
 } // UART0_Handler
-//----------
 
 /*--------------------------CORPO DAS THREADS AQUI---------------------------*/
 
@@ -71,34 +70,33 @@ void receptora(void *arg)
     }
     else if(INITIALIZED)
     {
-      
       first = rx_buffer[0];
       
       if(first == 'e' || first == 'c' || first == 'd')
       {        
-        if(rx_buffer[1] == 'E') //externa - coloca na gerenciadora
+        if(rx_buffer[1] == 'E')
         {
           osMessageQueuePut(gerenciadora_queue_id, rx_buffer, 1, osWaitForever);
         }
-        else if(rx_buffer[1] == 'I') //interno - coloca direto na fila do elev.
+        else if(rx_buffer[1] == 'I')
         {
           uint8_t prio = 0;
           char andar_char =  rx_buffer[2];
           uint8_t andar_int = andar_char - ASCII_FLOOR_CHAR_TO_INT;
 
-          tx_msg[0] = SOLICITATION_CHAR; //indica q a msg e referente a solicitacao
+          tx_msg[0] = SOLICITATION_CHAR;
           tx_msg[1] = first;
           
-          if(andar_char < 'k') //andar menor q o 10: so tem 1 digito
+          if(andar_char < 'k')
           {
-            tx_msg[2] = andar_char - ASCII_OFFSET_FLOOR_CHAR_TO_DIGIT_CHAR;
+            tx_msg[2] = andar_char - ASCII_OFFSET_CHAR_NUM_TO_FLOOR_CHAR;
             tx_msg[3] = andar_int;
             tx_msg[4] = 0;
           }
-          else // andar tem dois digitos
+          else
           {
             tx_msg[2] =  '1';
-            tx_msg[3] = andar_char - (ASCII_OFFSET_FLOOR_CHAR_TO_DIGIT_CHAR + 10);
+            tx_msg[3] = andar_char - (ASCII_OFFSET_CHAR_NUM_TO_FLOOR_CHAR + 10);
             tx_msg[4] = andar_int;
             tx_msg[5] = 0;  
           }
@@ -129,7 +127,9 @@ void receptora(void *arg)
             recept_elev->change_prio = true;   
           }
           
-          osMessageQueuePut(recept_elev->mov_queue_id, tx_msg, prio, osWaitForever);   
+          osMessageQueuePut(recept_elev->mov_queue_id, tx_msg, prio, osWaitForever); 
+
+          button_ligth_on(recept_elev->elev_ch, andar_char);
         }
         else
         {
@@ -197,7 +197,7 @@ void gerenciadora(void *arg)
   {
     osMessageQueueGet(gerenciadora_queue_id, &rx_msg, NULL, osWaitForever);
     
-    andar_request = ((rx_msg[2] - ASCII_OFFSET) * 10) + (rx_msg[3] - ASCII_OFFSET);
+    andar_request = ((rx_msg[2] - ASCII_OFFSET_INT_NUM_TO_CHAR_NUM) * 10) + (rx_msg[3] - ASCII_OFFSET_INT_NUM_TO_CHAR_NUM);
     dir = rx_msg[4];
     
     switch(rx_msg[0])
@@ -337,14 +337,14 @@ void gerenciadora(void *arg)
     
     if(andar_request < 10)
     {
-      tx_msg[2] = andar_request + ASCII_OFFSET;
+      tx_msg[2] = andar_request + ASCII_OFFSET_INT_NUM_TO_CHAR_NUM;
       tx_msg[3] = andar_request;
       tx_msg[4] = 0;
     }
     else
     {
       tx_msg[2] = '1';
-      tx_msg[3] = (andar_request % 10) + ASCII_OFFSET;
+      tx_msg[3] = (andar_request % 10) + ASCII_OFFSET_INT_NUM_TO_CHAR_NUM;
       tx_msg[4] = andar_request;
       tx_msg[5] = 0;  
     }
@@ -377,34 +377,28 @@ void acionadora(void *arg)
   
   osThreadFlagsWait(INIT_ACIONA_FLAG, osFlagsWaitAny, osWaitForever);
   
-  osMutexAcquire(mutex_id, osWaitForever);
-  UARTprintf("%c%c\r", elev->elev_ch, 'r'); //inicializa elevador
-  osMutexRelease(mutex_id);
-  
+  init_elev(elev->elev_ch);
   elev->estado = PARADO_ABRINDO;
   sprintf(exp_msg, "%cA\r", elev->elev_ch);
   
   while(1)
   {
-    
-    if(elev->change_prio)   // chegou sol. com maior prioridade
+    if(elev->change_prio)
     {
-      if(elev->requests > 1) //se houver mais de uma solicitacao, coloca a atual de volta na fila
+      elev->change_prio = false;
+
+      if(elev->requests > 1)
       {
         sprintf(tx_msg, "S%s", exp_msg_floor);
         
         osMessageQueuePut(elev->mov_queue_id, tx_msg, elev->current_prio, osWaitForever);
       }
-      
-      //recebe a solicitacao de maior prioridade
+
       osMessageQueueGet(elev->mov_queue_id, rx_msg,  &elev->current_prio, 0);
       
-      elev->change_prio = false;
-      
-      if(rx_msg[0] == SOLICITATION_CHAR) //e uma solicitacao
+      if(rx_msg[0] == SOLICITATION_CHAR)
       {
-        //obtem o andar solicitado
-        if(rx_msg[4] == 0) //andar so tem 1 digito
+        if(rx_msg[4] == 0)
         {
           andar_request = rx_msg[3];
         }
@@ -413,16 +407,10 @@ void acionadora(void *arg)
           andar_request = rx_msg[4];
         }
 
-        // obtem posicao a ser alcancada
         position_to_reach = (MAX_POSITION/(QTT_LEVELS - 1)) * andar_request;
 
         parse_solicitation(elev, andar_request, rx_msg, exp_msg_floor);
       }
-      
-      //se o elevador ja estiver em movimento, basta substituir exp_msg.
-      //se nao, primeiro fecha a porta caso esteja aberta (esperando confirmacao),
-      //e verifica a diferenca do andar atual do elevador e o andar solicitado:
-      //se for negativa, deve subir, se for positiva deve descer.
       
       if(elev->estado == SUBINDO || elev->estado == DESCENDO)
       {
@@ -437,20 +425,16 @@ void acionadora(void *arg)
           on_previous_floor = true;
         }
         
-        osMutexAcquire(mutex_id, osWaitForever);
-        UARTprintf("%c%c\r", elev->elev_ch, 'f'); //pediu pra fechar a porta
-        osMutexRelease(mutex_id);
-        
+        close_door(elev->elev_ch);        
         elev->estado = PARADO_FECHANDO;
         sprintf(exp_msg, "%cF", elev->elev_ch);     
       }
     }
   
-    //deve atualizar a posicao atual do elevador
     if(elev->estado == SUBINDO || elev->estado == DESCENDO)
     {
       if(on_previous_floor)
-      { 
+      {
         if(elev->current_position < (position_to_reach - (TOLERANCE_BASE + (andar_request * FLOOR_FACTOR)))
            || elev->current_position > (position_to_reach + (TOLERANCE_BASE + (andar_request * FLOOR_FACTOR))) )
         {         
@@ -459,12 +443,8 @@ void acionadora(void *arg)
             get_position(elev, rx_msg);
         }
         else
-        {          
-          osMutexAcquire(mutex_id, osWaitForever);
-          UARTprintf("%c%c\r", elev->elev_ch, 'p'); //pede p/ parar
-          osMutexRelease(mutex_id);
-          
-          osDelay(DELAY_MS_TO_STOP);
+        {
+          stop_elev(elev->elev_ch);
           
           osMutexAcquire(mutex_acert, osWaitForever);
           elev->estado = ACERTA_POSICAO;
@@ -472,7 +452,12 @@ void acionadora(void *arg)
       }
       else
       {
-        osMessageQueueGet(elev->elev_queue_id, rx_msg,  NULL, 0);
+        osStatus_t ret = osMessageQueueGet(elev->elev_queue_id, rx_msg,  NULL, 0);
+
+        if(ret == osOK)
+        {
+          update_level(elev, rx_msg);
+        }
       }
     }
 
@@ -495,9 +480,9 @@ void acionadora(void *arg)
             {
               elev->current_prio = prio_recv;
               
-              if(rx_msg[0] == SOLICITATION_CHAR) //e uma solicitacao
+              if(rx_msg[0] == SOLICITATION_CHAR)
               {                
-                if(rx_msg[4] == 0) //andar so tem 1 digito
+                if(rx_msg[4] == 0)
                 {
                   andar_request = rx_msg[3];     
                 }
@@ -517,20 +502,14 @@ void acionadora(void *arg)
           
           if(dif < 0)
           {
-            osMutexAcquire(mutex_id, osWaitForever);
-            UARTprintf("%c%c\r", elev->elev_ch, 's'); //pediu subir
-            osMutexRelease(mutex_id);
-            
+            go_up(elev->elev_ch);            
             elev->estado = SUBINDO;
             
             strcpy(exp_msg, exp_msg_floor);
           }
           else if(dif > 0)
           {
-             osMutexAcquire(mutex_id, osWaitForever);
-             UARTprintf("%c%c\r", elev->elev_ch, 'd'); //pediu descer
-             osMutexRelease(mutex_id); 
-             
+             go_down(elev->elev_ch);
              elev->estado = DESCENDO;
              
              strcpy(exp_msg, exp_msg_floor);
@@ -538,8 +517,7 @@ void acionadora(void *arg)
         }
         else if(elev->andar != 0)
         {          
-          sprintf(tx_msg, "%c%c%c", SOLICITATION_CHAR, elev->elev_ch, '0');
-          tx_msg[3] = 0;
+          sprintf(tx_msg, "%c%c0\0", SOLICITATION_CHAR, elev->elev_ch);
           osMessageQueuePut(elev->mov_queue_id, tx_msg,  1, osWaitForever);
           elev->requests++;
         }
@@ -561,18 +539,15 @@ void acionadora(void *arg)
           on_previous_floor = false;
           elev->requests--;
           elev->andar = andar_request;
-          
-          osDelay(7000);
-          
+
           if(elev->andar != 0)
           {
-            osMutexAcquire(mutex_id, osWaitForever);
-            UARTprintf("%c%c\r", elev->elev_ch, 'f'); //pediu pra fechar a porta
-            osMutexRelease(mutex_id);
-            
+            osDelay(DELAY_MS_TO_KEEP_OPEN);
+
+            close_door(elev->elev_ch);            
             elev->estado = PARADO_FECHANDO;
             sprintf(exp_msg, "%cF", elev->elev_ch);
-          }  
+          }
         }
       break;
       //------------------------------------------------------ 
@@ -586,50 +561,21 @@ void acionadora(void *arg)
       break;
       //------------------------------------------------------ 
       case SUBINDO:
-        if((andar_request - elev->andar)  == 1)
+        if(((andar_request - elev->andar) == 1) || (strncmp(exp_msg, rx_msg, 3) == 0))
         {
           on_previous_floor = true;
-        }
-
-        if(andar_request < 11)
-        {
-          if((strncmp(exp_msg, rx_msg, 2) == 0))
-          {            
-            on_previous_floor = true;
-          }        
-        }
-        else
-        {
-          if((strncmp(exp_msg, rx_msg, 3) == 0))
-          {
-            on_previous_floor = true;
-          }
         }
       break;
       //------------------------------------------------------ 
       case DESCENDO:
-        if((elev->andar - andar_request) == 1)
+        if(((elev->andar - andar_request) == 1) || (strncmp(exp_msg, rx_msg, 3) == 0))
         {
           on_previous_floor = true;
         }
-
-        if(andar_request < 9)
-        {
-          if((strncmp(exp_msg, rx_msg, 2) == 0))
-          {
-            on_previous_floor = true;
-          }          
-        }
-        else
-        {
-          if((strncmp(exp_msg, rx_msg, 3) == 0))
-          {
-            on_previous_floor = true;
-          }
-        }
-      break; 
+      break;
+      //------------------------------------------------------
       case ACERTA_POSICAO:
-                
+
         do
         {  
           last_position = elev->current_position;
@@ -642,27 +588,19 @@ void acionadora(void *arg)
         
         if(elev->current_position < (position_to_reach - SIM_TOLERANCE))
         { 
-          osMutexAcquire(mutex_id, osWaitForever);
-          UARTprintf("%c%c\r", elev->elev_ch, 's'); //pediu subir
+          go_up(elev->elev_ch);
           
           osDelay(DELAY_MS_TO_ADJUST);
 
-          UARTprintf("%c%c\r", elev->elev_ch, 'p'); //pede p/ parar
-          osMutexRelease(mutex_id);
-          
-          osDelay(DELAY_MS_TO_STOP);
+          stop_elev(elev->elev_ch);
         }
         else if(elev->current_position > (position_to_reach + SIM_TOLERANCE))
-        {         
-          osMutexAcquire(mutex_id, osWaitForever);
-          UARTprintf("%c%c\r", elev->elev_ch, 'd'); //pediu descer
+        {
+          go_down(elev->elev_ch);
           
           osDelay(DELAY_MS_TO_ADJUST);
           
-          UARTprintf("%c%c\r", elev->elev_ch, 'p'); //pede p/ parar
-          osMutexRelease(mutex_id);
-          
-          osDelay(DELAY_MS_TO_STOP);
+          stop_elev(elev->elev_ch);
         }
         else
         {       
@@ -670,24 +608,21 @@ void acionadora(void *arg)
              && elev->current_position < (position_to_reach + SIM_TOLERANCE))
           {
             osMutexRelease(mutex_acert);
+
+            come_to_destiny = true;
             
-            osMutexAcquire(mutex_id, osWaitForever);
-            UARTprintf("%c%c\r", elev->elev_ch, 'a'); //pede p/ abrir
-            osMutexRelease(mutex_id);
-            
+            open_door(elev->elev_ch);
             elev->estado = PARADO_ABRINDO;
             sprintf(exp_msg, "%cA\r", elev->elev_ch);
-            
-            come_to_destiny = true;
+
+            button_ligth_off(elev->elev_ch, (andar_request + ASCII_OFFSET_INT_NUM_TO_CHAR_NUM + ASCII_OFFSET_CHAR_NUM_TO_FLOOR_CHAR));  
           }
         }
       break;
       default:
       break;
-    } 
- 
+    }
   }
-  
 }
 
 
@@ -756,72 +691,157 @@ void main(void){
   while(1);
 } // main
 
+void send_command(const char* command)
+{
+  osMutexAcquire(mutex_id, osWaitForever);
+  UARTprintf("%s\r", command);
+  osMutexRelease(mutex_id);   
+}
+
+void init_elev(char elev_ch)
+{
+  char init_msg[5] = {0};
+  sprintf(init_msg, "%cr", elev_ch);
+
+  send_command(init_msg);
+}
+
+void button_ligth_on(char elev_ch, char floor_ch)
+{
+  char on_msg[5] = {0};
+  sprintf(on_msg, "%cL%c", elev_ch, floor_ch);
+
+  send_command(on_msg);
+}
+
+void button_ligth_off(char elev_ch, char floor_ch)
+{
+  char off_msg[5] = {0};
+  sprintf(off_msg, "%cD%c", elev_ch, floor_ch);
+
+  send_command(off_msg);
+}
+
+void open_door(char elev_ch)
+{
+  char open_msg[5] = {0};
+  sprintf(open_msg, "%ca", elev_ch);
+
+  send_command(open_msg);
+}
+
+void close_door(char elev_ch)
+{
+  char close_msg[5] = {0};
+  sprintf(close_msg, "%cf", elev_ch);
+
+  send_command(close_msg);
+}
+
+void stop_elev(char elev_ch)
+{
+  char stop_msg[5] = {0};
+  sprintf(stop_msg, "%cp", elev_ch);
+
+  send_command(stop_msg); 
+
+  osDelay(DELAY_MS_TO_STOP);
+}
+
+void go_up(char elev_ch)
+{
+  char up_msg[5] = {0};
+  sprintf(up_msg, "%cs", elev_ch);
+
+  send_command(up_msg);
+}
+
+void go_down(char elev_ch)
+{
+  char down_msg[5] = {0};
+  sprintf(down_msg, "%cd", elev_ch);
+
+  send_command(down_msg);
+}
+
 bool get_position(elevador_t* elev, char* rx_msg)
 {
 	osMutexAcquire(mutex_id, osWaitForever);
     
-    bool ret = false;
-    req_elev_pos = elev->elev_ch;
-    UARTprintf("%c%c\r", elev->elev_ch, 'x');
-     
-    osStatus_t q_ret = osMessageQueueGet(elev->elev_queue_id, rx_msg, NULL, 200);  
+  bool ret = false;
+  req_elev_pos = elev->elev_ch;
+  UARTprintf("%c%c\r", elev->elev_ch, 'x');
     
-    if(q_ret == osOK)
-    {  
-      if(rx_msg[0] != 'e' && rx_msg[0] != 'c' && rx_msg[0] != 'd')
-      {
-        elev->current_position = atoi(rx_msg);
-        ret = true;
-      }
-    } 
-    
-    osMutexRelease(mutex_id);
+  osStatus_t q_ret = osMessageQueueGet(elev->elev_queue_id, rx_msg, NULL, 200);  
   
-    return ret;
+  if(q_ret == osOK)
+  {  
+    if(rx_msg[0] != 'e' && rx_msg[0] != 'c' && rx_msg[0] != 'd')
+    {
+      elev->current_position = atoi(rx_msg);
+      ret = true;
+    }
+  }
+  
+  osMutexRelease(mutex_id);
+
+  return ret;
+}
+
+void update_level(elevador_t* elev, char* rx_msg)
+{
+  if(rx_msg[2] == 0)
+  {
+    elev->andar = rx_msg[1] - ASCII_OFFSET_INT_NUM_TO_CHAR_NUM;
+  }
+  else if(rx_msg[3] == 0)
+  {
+    elev->andar = 10 + (rx_msg[2] - ASCII_OFFSET_INT_NUM_TO_CHAR_NUM);
+  }
 }
 
 void parse_solicitation(elevador_t* elev, uint8_t andar_request, char* rx_msg, char* exp_msg_floor)
 {
 	int8_t dif = elev->andar - andar_request;
         
-  if(andar_request < 10) //andar so tem 1 digito
+  if(andar_request < 10)
   {          
-    if(dif < 0)//deve subir
+    if(dif < 0)
     {
-        sprintf(exp_msg_floor, "%c%c%c", elev->elev_ch, rx_msg[2] - 1, rx_msg[3]);
+        sprintf(exp_msg_floor, "%c%c", elev->elev_ch, rx_msg[2] - 1);
     }
     else if (dif > 0)
     {
         if(andar_request == 9)
         {
-          sprintf(exp_msg_floor, "%c%c%c%c", elev->elev_ch, rx_msg[2] - 8, rx_msg[2] - 9, rx_msg[3]);
+          sprintf(exp_msg_floor, "%c%c%c", elev->elev_ch, rx_msg[2] - 8, rx_msg[2] - 9);
         }
         else
         {  
-          sprintf(exp_msg_floor, "%c%c%c", elev->elev_ch, rx_msg[2] + 1, rx_msg[3]);
+          sprintf(exp_msg_floor, "%c%c", elev->elev_ch, rx_msg[2] + 1);
         }
     }
   }
   else if(andar_request == 10)
   {
-    if(dif < 0)//deve subir
+    if(dif < 0)
     {
-        sprintf(exp_msg_floor, "%c%c%c", elev->elev_ch, rx_msg[3] + 9, rx_msg[4]);
+        sprintf(exp_msg_floor, "%c%c", elev->elev_ch, rx_msg[3] + 9);
     }
     else if (dif > 0)
     {
-        sprintf(exp_msg_floor, "%c%c%c%c", elev->elev_ch, rx_msg[2], rx_msg[3] +1, rx_msg[4]);
+        sprintf(exp_msg_floor, "%c%c%c", elev->elev_ch, rx_msg[2], rx_msg[3] +1);
     }
   }
   else
   {
-    if(dif < 0)//deve subir
+    if(dif < 0)
     {
-        sprintf(exp_msg_floor, "%c%c%c%c", elev->elev_ch, rx_msg[2], rx_msg[3] - 1, rx_msg[4]);
+        sprintf(exp_msg_floor, "%c%c%c", elev->elev_ch, rx_msg[2], rx_msg[3] - 1);
     }
     else if (dif > 0)
     {
-        sprintf(exp_msg_floor, "%c%c%c%c", elev->elev_ch, rx_msg[2], rx_msg[3] + 1, rx_msg[4]);
+        sprintf(exp_msg_floor, "%c%c%c", elev->elev_ch, rx_msg[2], rx_msg[3] + 1);
     } 
   }
 }
